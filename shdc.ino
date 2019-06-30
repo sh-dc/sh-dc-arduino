@@ -35,12 +35,10 @@ const byte targets_count = sizeof(targets) / sizeof(TARGETS);
 #define LOOP_TARGETS for (byte target_num = 0; target_num < targets_count; target_num++)
 #define TARGET       targets[target_num]
 
-/* bit operations:
- * use `field & MASK` to check field
- * use `field | MASK` to enable field
- * use `field & ~MASK` to disable field
- * use `field ^ MASK` to toggle field
- */
+#define BITMASK_CHECK(field, mask)  field & mask
+#define BITMASK_SET(field, mask)    field | mask
+#define BITMASK_CLEAR(field, mask)  field & ~mask
+#define BITMASK_TOGGLE(field, mask) field ^ mask
 
 // bit mask for the SWITCHES flags
 #define FLAG_NONE     0
@@ -157,20 +155,20 @@ void setup()
   LOOP_TARGETS { pinMode(TARGET.output_pin, OUTPUT); }
   LOOP_SWITCHES {
     SWITCH.button.begin();
-    if (load_state(switch_num)) SWITCH.state = SWITCH.state | STATE_ENABLED | STATE_CHANGED;
+    if (load_state(switch_num)) BITMASK_SET(SWITCH.state, STATE_ENABLED | STATE_CHANGED);
   }
 }
 
 void inline read_bistable_switch(byte switch_num)
 {
   if (
-    (SWITCH.button.isPressed() && !SWITCH.state & STATE_PROCESSED) || // first time after press
-    (!SWITCH.button.isPressed() && SWITCH.state & STATE_PROCESSED)    // first time after leave
+    (SWITCH.button.isPressed() && !BITMASK_CHECK(SWITCH.state, STATE_PROCESSED)) || // first time after press
+    (!SWITCH.button.isPressed() && BITMASK_CHECK(SWITCH.state, STATE_PROCESSED))    // first time after leave
   ) {
-    SWITCH.state = SWITCH.state | STATE_CHANGED;
-    SWITCH.state = SWITCH.state ^ STATE_PROCESSED;
-    SWITCH.state = SWITCH.state ^ STATE_ENABLED;
-    save_state(switch_num, SWITCH.state & STATE_ENABLED);
+    BITMASK_SET(SWITCH.state, STATE_CHANGED);
+    BITMASK_TOGGLE(SWITCH.state, STATE_PROCESSED);
+    BITMASK_TOGGLE(SWITCH.state, STATE_ENABLED);
+    save_state(switch_num, BITMASK_CHECK(SWITCH.state, STATE_ENABLED));
   }
 }
 
@@ -178,17 +176,17 @@ void inline read_monostable_switch(byte switch_num)
 {
   if (SWITCH.button.isPressed())
   {
-    if (!SWITCH.state & STATE_PROCESSED)
+    if (!BITMASK_CHECK(SWITCH.state, STATE_PROCESSED))
     {
       // first time after press
-      SWITCH.state = SWITCH.state | STATE_CHANGED;
-      SWITCH.state = SWITCH.state | STATE_PROCESSED;
-      SWITCH.state = SWITCH.state ^ STATE_ENABLED;
-      save_state(switch_num, SWITCH.state & STATE_ENABLED);
+      BITMASK_SET(SWITCH.state, STATE_CHANGED);
+      BITMASK_SET(SWITCH.state, STATE_PROCESSED);
+      BITMASK_TOGGLE(SWITCH.state, STATE_ENABLED);
+      save_state(switch_num, BITMASK_CHECK(SWITCH.state, STATE_ENABLED));
     }
   } else {
     // first time after leave
-    if (SWITCH.state & STATE_PROCESSED) SWITCH.state = SWITCH.state & ~STATE_PROCESSED;
+    if (BITMASK_CHECK(SWITCH.state, STATE_PROCESSED)) BITMASK_CLEAR(SWITCH.state, STATE_PROCESSED);
   }
 }
 
@@ -196,7 +194,7 @@ void inline loop_read_switches()
 {
   LOOP_SWITCHES {
     SWITCH.button.read();
-    if (SWITCH.flags & FLAG_BISTABLE)
+    if (BITMASK_CHECK(SWITCH.flags, FLAG_BISTABLE))
       read_bistable_switch(switch_num);
     else
       read_monostable_switch(switch_num);
@@ -206,8 +204,8 @@ void inline loop_read_switches()
 void inline loop_trigger_connections()
 {
   LOOP_CONNECTIONS {
-    if (CONNECTION_SWITCH.state & STATE_CHANGED)
-      set_target_state(CONNECTION.target, CONNECTION_SWITCH.state & STATE_ENABLED);
+    if (BITMASK_CHECK(CONNECTION_SWITCH.state, STATE_CHANGED))
+      set_target_state(CONNECTION.target, BITMASK_CHECK(CONNECTION_SWITCH.state, STATE_CHANGED));
   }
 }
 
@@ -219,8 +217,7 @@ void inline loop_target_rules()
 void inline loop_reset_switches_changed()
 {
   LOOP_SWITCHES {
-    if (SWITCH.state & STATE_CHANGED)
-      SWITCH.state = SWITCH.state & ~STATE_CHANGED;
+    if (BITMASK_CHECK(SWITCH.state, STATE_CHANGED)) BITMASK_CLEAR(SWITCH.state, STATE_CHANGED);
   }
 }
 
