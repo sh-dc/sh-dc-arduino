@@ -4,90 +4,29 @@
 #include <EEPROM.h>
 #include <time.h>
 #include <JC_Button.h>
+#include "sh-dc-arduino/structures.h"
 
-/* Rule values:
-   0: toggle
-   1: toggle, delayed off by `rule_value` seconds of time
-   2: turn on, for `rule_value` seconds of time (auto off after `rule_value` seconds of time)
-*/
-struct TARGETS
-{
-  // user defined
-  const byte     output_pin;
-  const uint8_t  rule;
-  const uint32_t rule_value;
-
-  // used internally, do not define!
-  uint32_t rule_data;
-} targets[] =
-{
-  /*  0 */ {  0, 2, 17 },  // bathroom blinders up   timed 17s (14s measured)
-  /*  1 */ {  1, 2, 17 },  // bathroom blinders down timed 17s (14s measured)
-  /*  2 */ {  2, 0, 0 },   // bathroom light 1
-  /*  3 */ {  3, 0, 0 },   // bathroom light 2
-  /*  4 */ {  4, 0, 0 },   // bathroom light 3
-  /*  5 */ {  5, 1, 300 }, // bathroom fan +5 min after off
-  /*  6 */ {  6, 0, 0 },   // corridor-bedroom light
-  /*  7 */ {  7, 0, 0 },   // wc light
-  /*  8 */ {  8, 1, 300 }, // wc fan +5min after off
-};
-const byte targets_count = sizeof(targets) / sizeof(TARGETS);
-#define LOOP_TARGETS for (byte target_num = 0; target_num < targets_count; target_num++)
-#define TARGET       targets[target_num]
-
-#define BITMASK_CHECK(field, mask)  field & mask
-#define BITMASK_SET(field, mask)    field | mask
-#define BITMASK_CLEAR(field, mask)  field & ~mask
-#define BITMASK_TOGGLE(field, mask) field ^ mask
-
-// bit mask for the SWITCHES flags
-#define FLAG_NONE     0
-#define FLAG_BISTABLE B1 // monostable otherwise
+#include "configuration.h"
 
 // bit mask for the SWITCHES state
 #define STATE_ENABLED   B001
 #define STATE_PROCESSED B010
 #define STATE_CHANGED   B100
 
-struct SWITCHES {
-  // user defined
-  const Button button;
-  const byte   flags;
 
-  // used internally, do not define!
-  byte state;
-} switches[] =
-{
-  /*  0 */ { Button(A0, 1, 1, 30), FLAG_BISTABLE }, // bathroom blinders up
-  /*  1 */ { Button(A1, 1, 1, 30), FLAG_BISTABLE }, // bathroom blinders down
-  /*  2 */ { Button(A2, 1, 1, 30), FLAG_NONE },     // bathroom light 1
-  /*  3 */ { Button(A3, 1, 1, 30), FLAG_NONE },     // bathroom light 2
-  /*  4 */ { Button(A4, 1, 1, 30), FLAG_NONE },     // corridor-bedroom light
-  /*  5 */ { Button(A5, 1, 1, 30), FLAG_NONE },     // wc light
-};
+#define BITMASK_CHECK(field, mask)  field & mask
+#define BITMASK_SET(field, mask)    field | mask
+#define BITMASK_CLEAR(field, mask)  field & ~mask
+#define BITMASK_TOGGLE(field, mask) field ^ mask
+
+const byte targets_count = sizeof(targets) / sizeof(TARGETS);
+#define LOOP_TARGETS for (byte target_num = 0; target_num < targets_count; target_num++)
+#define TARGET       targets[target_num]
+
 const byte switches_count = sizeof(switches) / sizeof(SWITCHES);
 #define LOOP_SWITCHES for (byte switch_num = 0; switch_num < switches_count; switch_num++)
 #define SWITCH        switches[switch_num]
 
-struct CONNECTIONS
-{
-  // user defined
-  const byte source;
-  const byte target;
-} connections[] =
-{
-  { 0, 0 }, // bathroom blinders
-  { 1, 1 }, // bathroom blinders
-  { 2, 2 }, // bathroom light 1
-  { 3, 3 }, // bathroom light 2
-  { 2, 4 }, // bathroom light 3 on bathroom light 1
-  { 3, 4 }, // bathroom light 3 on bathroom light 2
-  { 2, 5 }, // bathroom fan on bathroom light 1
-  { 3, 5 }, // bathroom fan on bathroom light 2
-  { 4, 6 }, // corridor-bedroom light
-  { 5, 7 }, // wc light
-  { 5, 8 }, // wc fan on wc light
-};
 const byte connections_count = sizeof(connections) / sizeof(CONNECTIONS);
 #define LOOP_CONNECTIONS  for (byte connection_num = 0; connection_num < connections_count; connection_num++)
 #define CONNECTION        connections[connection_num]
