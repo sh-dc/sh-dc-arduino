@@ -4,6 +4,8 @@
 
 #include "ShDcMonostable.h"
 
+#TODO: Toggle switch with read/save state
+
 namespace ShDc
 {
   Monostable::Monostable(byte pin, void (*init_func)(byte), byte (*read_func)(byte), uint8_t debounce=25)
@@ -25,8 +27,8 @@ namespace ShDc
 
   void Monostable::read()
   {
-    uint32_t time  = get_time();
-    byte     value = m_read_func(m_pin);
+    vs_time_t time  = get_time();
+    byte      value = m_read_func(m_pin);
 
     if (time - m_last_time > m_debounce && m_state.last_pin != value)
     {
@@ -47,11 +49,13 @@ namespace ShDc
     return m_state.last_pin;
   }
 
-  uint32_t Monostable::state_time(){
+  vs_time_t Monostable::state_time(){
     return get_time() - m_last_time;
   }
 
-  uint32_t Monostable::get_time(){
-    return millis();
+  void Monostable::state_handler(Target *target){
+    if (changed() && state()) {
+      target->set_state(!target->get_state());
+    }
   }
 }

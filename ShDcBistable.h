@@ -17,6 +17,7 @@ namespace ShDc
     using Monostable::Monostable;
 
     uint8_t type();
+    void state_handler(Target *target);
   };
 }
 
